@@ -6,71 +6,59 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 # Package meta-data.
-NAME = 'mypackage'
-DESCRIPTION = 'My short description for my project.'
-URL = 'httpsgithub.commemyproject'
-EMAIL = 'me@example.com'
-AUTHOR = 'Awesome Soul'
-REQUIRES_PYTHON = '=3.6.0'
-VERSION = None
+NAME = 'fsync'
+DESCRIPTION = 'FolderSync: A simple utility to compare/sync the contents of folders.'
+URL = 'https://github.com/Anmol-Singh-Jaggi/fsync.git'
+EMAIL = 'anmolj.65@gmail.com'
+AUTHOR = 'Anmol Singh Jaggi'
+REQUIRES_PYTHON = '>=3.7.0'
+VERSION = '0.1.0'
 
-# What packages are required for this module to be executed
 REQUIRED = [
-    # 'requests', 'maya', 'records',
+    'tqdm'
 ]
 
-# What packages are optional
 EXTRAS = {
-    # 'fancy feature' ['django'],
 }
-
-# The rest you shouldn't have to touch too much )
-# ------------------------------------------------
-# Except, perhaps the License and Trove Classifiers!
-# If you do change the License, remember to change the Trove Classifier for that!
 
 here = os.path.abspath(os.path.dirname(__file__))
 
-# Import the README and use it as the long-description.
-# Note this will only work if 'README.md' is present in your MANIFEST.in file!
-try
-    with io.open(os.path.join(here, 'README.md'), encoding='utf-8') as f
-        long_description = 'n' + f.read()
-except FileNotFoundError
+
+try:
+    with io.open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
+        long_description = '\n' + f.read()
+except FileNotFoundError:
     long_description = DESCRIPTION
 
-# Load the package's __version__.py module as a dictionary.
 about = {}
-if not VERSION
-    project_slug = NAME.lower().replace(-, _).replace( , _)
-    with open(os.path.join(here, project_slug, '__version__.py')) as f
+if not VERSION:
+    project_slug = NAME.lower().replace('-', '_').replace(' ', '_')
+    with open(os.path.join(here, project_slug, '__version__.py')) as f:
         exec(f.read(), about)
-else
+else:
     about['__version__'] = VERSION
 
 
-class UploadCommand(Command)
-    Support setup.py upload.
+class UploadCommand(Command):
 
     description = 'Build and publish the package.'
     user_options = []
 
     @staticmethod
-    def status(s)
-        Prints things in bold.
+    def status(s):
         print('033[1m{0}033[0m'.format(s))
 
-    def initialize_options(self)
+    def initialize_options(self):
         pass
 
-    def finalize_options(self)
+    def finalize_options(self):
         pass
 
-    def run(self)
-        try
+    def run(self):
+        try:
             self.status('Removing previous builds…')
             rmtree(os.path.join(here, 'dist'))
-        except OSError
+        except OSError:
             pass
 
         self.status('Building Source and Wheel (universal) distribution…')
@@ -97,14 +85,13 @@ setup(
     python_requires=REQUIRES_PYTHON,
     url=URL,
     packages=find_packages(exclude=('tests',)),
-    # If your package is a single module, use this instead of 'packages'
-    # py_modules=['mypackage'],
-
-    # entry_points={
-    #     'console_scripts' ['mycli=mymodulecli'],
-    # },
     install_requires=REQUIRED,
     extras_require=EXTRAS,
+    entry_points={ 
+        'console_scripts': [
+            'fsync=fsync.fsync:main',
+        ],
+    },
     include_package_data=True,
     license='MIT',
     classifiers=[
@@ -117,8 +104,7 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3.7'
     ],
-    # $ setup.py publish support.
     cmdclass={
-        'upload' UploadCommand,
+        'upload': UploadCommand,
     },
 )

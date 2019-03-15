@@ -248,7 +248,8 @@ def prepare_args_parser():
         '--hide-progress-bar',
         action='store_true',
         help='Whether to hide the progress bar or not.')
-    args = parser.parse_args(['D:/anmol', 'D:/anmol'])
+    #args = parser.parse_args(['D:/anmol', 'D:/anmol'])
+    args = parser.parse_args()
     args = vars(args)
     return args
 
