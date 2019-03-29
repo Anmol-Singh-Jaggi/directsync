@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import hashlib
 from pathlib import Path
 import shutil
 import os
@@ -45,25 +44,47 @@ class FSync:
         except UnicodeDecodeError:
             return False
 
+    def _compare_file_contents_buffered(self, path1, path2):
+        buffer_size = 100000
+        with open(path1, 'rb') as fp1, open(path2, 'rb') as fp2:
+            while True:
+                path1_bytes = fp1.read(buffer_size)
+                path2_bytes = fp2.read(buffer_size)
+                if path1_bytes != path2_bytes:
+                    return False
+                if not path1_bytes:
+                    return True
+
     def _are_files_equal(self, path_left, path_right):
         # First check the file sizes.
         left_size = path_left.stat().st_size
         right_size = path_right.stat().st_size
         if left_size != right_size:
+            # If file sizes are different, then return straightaway!
             return False
         if not self._is_file_text(path_left):
             if left_size > 1000000:
+                # Assume huge binary files have the same content
+                # for performance.
                 return True
-        contents = path_left.read_bytes()
-        left_hash = hashlib.md5(contents).digest()
-        contents = path_right.read_bytes()
-        right_hash = hashlib.md5(contents).digest()
-        return left_hash == right_hash
+        # If file size is same, and the files are text/small binaries,
+        # then compare their contents.
+        return self._compare_file_contents_buffered(path_left, path_right)
 
     def _compare_subfiles(self, left_dir_contents, right_dir_contents):
+        '''
+        Compare the file items.
+        '''
         left_files = [x for x in left_dir_contents if x.is_file()]
         right_files = [x for x in right_dir_contents if x.is_file()]
 
+        # Use a merging sort of algorithm.
+        # 1. Sort the 2 lists according to Path's inbuilt comparison predicate
+        # 2. Have 2 pointers, one on either list.
+        # 3. If the 2 pointed items have the same name, then compare contents.
+        #    Else add the lower name entry to `extras` and advance its pointer.
+        # 4. Repeat 3 until either of the pointers reach the end.
+        # 5. Exhaust the 2 pointers and add all the pointed items to `extras`.
         left_iterator = 0
         right_iterator = 0
 
@@ -101,6 +122,9 @@ class FSync:
             self._mark_file_visit()
 
     def _compare_subdirs(self, left_dir_contents, right_dir_contents):
+        '''
+        Similar to `_compare_subfile()` but for directories.
+        '''
         left_subdirs = [x for x in left_dir_contents if x.is_dir()]
         right_subdirs = [x for x in right_dir_contents if x.is_dir()]
         # Directories (subdirectories) to explore next.
@@ -141,9 +165,11 @@ class FSync:
             self._mark_file_visit()
 
         for dir_entry in next_subdirs:
+            # Recursive call
             self._compare_dir_contents(dir_entry[0], dir_entry[1])
 
     def _compare_dir_contents(self, left_dir_path, right_dir_path):
+        # Need to sort for the merging-type algorithm later on.
         left_dir_contents = sorted([x for x in left_dir_path.iterdir()])
         right_dir_contents = sorted([x for x in right_dir_path.iterdir()])
         self._compare_subfiles(left_dir_contents, right_dir_contents)
@@ -151,12 +177,13 @@ class FSync:
 
     def check_differences(self):
         '''
-        Checks and stores the differences between the sides
+        Checks and stores the differences between the 2 directories.
         '''
         # TODO: Handle recursive structures with symlinks.
         left_dir_path = self.dirs_data.data_left.path
         right_dir_path = self.dirs_data.data_right.path
         if self.progress_bar:
+            # Count the total number of files to visit for progress bar.
             left_dir_generator = left_dir_path.rglob('*')
             left_file_count_recursive = sum(1 for i in left_dir_generator)
             right_dir_generator = right_dir_path.rglob('*')
@@ -171,6 +198,10 @@ class FSync:
             self.progress_bar.close()
 
     def _sync_items(self, item1, item2, overwrite=False):
+        '''
+        Synchronize two files/directories.
+        `overwrite`: Whether to overwrite item1 on item2 if present.
+        '''
         if item1.exists():
             if not overwrite and not item2.exists():
                 if item1.is_dir():
@@ -186,6 +217,9 @@ class FSync:
                     shutil.copyfile(item1, item2)
 
     def _remove_item(self, item):
+        '''
+        Helper function to remove a file/directory.
+        '''
         if item.exists():
             if item.is_dir():
                 shutil.rmtree(item)
@@ -193,22 +227,29 @@ class FSync:
                 item.unlink()
 
     def sync_dirs(self, overwrite=False, add_missing=False,
-                  remove_extra=False, reverse_direction=True):
+                  remove_extra=False, reverse_direction=False):
         '''
-        Copy all files to right not present there.
-        `overwrite`: Whether to overwrite files whose content has changed.
-        `add_missing`: Whether to copy files absent in the destination folder.
-        `remove_extra`: Whether to remove files absent from the source folder.
-        `direction`: If true, copies from left to right, otherwise in reverse.
+        Synchronize the directories based on the arguments passed:
+        `overwrite`: Whether to overwrite files in destination whose content
+                     is different from source.
+        `add_missing`: Whether to copy files from source that are absent in the
+                       destination folder.
+        `remove_extra`: Whether to remove files from the destination which are
+                        absent from the source.
+        `reverse_direction`: If true, copies from right dir to left dir.
         '''
+        if reverse_direction:
+            # Just swap the data of the 2 directories.
+            # We'll swap them again at the end to restore correctness.
+            self.dirs_data.data_left, self.dirs_data.data_right = \
+                self.dirs_data.data_right, self.dirs_data.data_left
         if self.progress_bar:
             total_files_count = 0
+            # Compute how many files do we need to visit; for the progress bar.
             if add_missing:
-                total_files_count += len(self.dirs_data.data_left.diff) if\
-                 not reverse_direction else len(self.dirs_data.data_right.diff)
+                total_files_count += len(self.dirs_data.data_left.diff)
             if remove_extra:
-                total_files_count += len(self.dirs_data.data_right.diff) if\
-                 not reverse_direction else len(self.dirs_data.data_left.diff)
+                total_files_count += len(self.dirs_data.data_right.diff)
             if overwrite:
                 total_files_count += len(self.dirs_data.hash_diff)
             if total_files_count == 0:
@@ -217,39 +258,47 @@ class FSync:
             self.progress_bar = tqdm(total=total_files_count,
                                      desc='Syncing contents...')
         if add_missing:
-            items_extra = self.dirs_data.data_left.diff if\
-             not reverse_direction else self.dirs_data.data_right.diff
+            items_extra = self.dirs_data.data_left.diff
             for item_src in items_extra:
-                src_base_path = self.dirs_data.data_left.path if\
-                    not reverse_direction else self.dirs_data.data_right.path
-                dst_base_path = self.dirs_data.data_right.path if\
-                    not reverse_direction else self.dirs_data.data_left.path
+                src_base_path = self.dirs_data.data_left.path
+                dst_base_path = self.dirs_data.data_right.path
                 item_relative = item_src.relative_to(src_base_path)
                 item_dst = dst_base_path / item_relative
                 self._sync_items(item_src, item_dst, overwrite)
                 self._mark_file_visit()
         if remove_extra:
-            items_extra = self.dirs_data.data_right.diff if\
-             not reverse_direction else self.dirs_data.data_left.diff
+            items_extra = self.dirs_data.data_right.diff
             for item in items_extra:
                 self._remove_item(item)
                 self._mark_file_visit()
         if overwrite:
             items_common = self.dirs_data.hash_diff
             for item in items_common:
-                item_src = item[0] if not reverse_direction else item[1]
-                item_dst = item[1] if not reverse_direction else item[0]
+                item_src = item[0]
+                item_dst = item[1]
+                if reverse_direction:
+                    item_src, item_dst = item_dst, item_src
                 self._sync_items(item_src, item_dst, True)
                 self._mark_file_visit()
         if self.progress_bar:
             self.progress_bar.close()
+        # Swap them again to restore correctness.
+        self.dirs_data.data_left, self.dirs_data.data_right = \
+            self.dirs_data.data_right, self.dirs_data.data_left
 
     def _mark_file_visit(self):
+        '''
+        Update the progress bar with 1 more iteraion.
+        '''
         if not self.progress_bar:
             return
         self.progress_bar.update()
 
     def get_report(self):
+        '''
+        Print the difference check report in a human as well as
+        machine readable format.
+        '''
         report_string = 'Left directory: "' + \
             str(self.dirs_data.data_left.path.resolve()) + '"\n'
         report_string += 'Right directory: "' + \
@@ -280,6 +329,10 @@ class FSync:
 
 
 def get_version():
+    '''
+    Read the current version from the version file to show in
+    the help section.
+    '''
     about = {}
     here = os.path.abspath(os.path.dirname(__file__))
     with open(os.path.join(here, '__version__.py')) as f:
@@ -288,6 +341,9 @@ def get_version():
 
 
 def prepare_args_parser():
+    '''
+    Construct and return the argument parser object.
+    '''
     description = 'fsync: An efficient and easy-to-use utility to'
     description += ' compare/synchronize/mirror folder contents.\n'
     description += 'Version ' + str(get_version()) + '\n'
