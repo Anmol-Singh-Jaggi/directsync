@@ -7,12 +7,12 @@ from setuptools import find_packages, setup, Command
 
 # Package meta-data.
 NAME = 'fsync'
-DESCRIPTION = 'FolderSync: A simple utility to compare/sync the contents of folders.'
+DESCRIPTION = 'Compare(*diff*)/synchronize/backup/mirror folders quickly.'
 URL = 'https://github.com/Anmol-Singh-Jaggi/fsync.git'
 EMAIL = 'anmolj.65@gmail.com'
 AUTHOR = 'Anmol Singh Jaggi'
 REQUIRES_PYTHON = '>=3.7.0'
-VERSION = '0.1.0'
+VERSION = ''
 
 REQUIRED = [
     'tqdm'
@@ -23,16 +23,16 @@ EXTRAS = {
 
 here = os.path.abspath(os.path.dirname(__file__))
 
-
 try:
     with io.open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
         long_description = '\n' + f.read()
 except FileNotFoundError:
     long_description = DESCRIPTION
 
+
 about = {}
 if not VERSION:
-    project_slug = NAME.lower().replace('-', '_').replace(' ', '_')
+    project_slug = NAME.lower().replace("-", "_").replace(" ", "_")
     with open(os.path.join(here, project_slug, '__version__.py')) as f:
         exec(f.read(), about)
 else:
@@ -40,13 +40,15 @@ else:
 
 
 class UploadCommand(Command):
+    """Support setup.py upload."""
 
     description = 'Build and publish the package.'
     user_options = []
 
     @staticmethod
     def status(s):
-        print('033[1m{0}033[0m'.format(s))
+        """Prints things in bold."""
+        print('\033[1m{0}\033[0m'.format(s))
 
     def initialize_options(self):
         pass
@@ -61,16 +63,16 @@ class UploadCommand(Command):
         except OSError:
             pass
 
-        self.status('Building Source and Wheel (universal) distribution…')
-        os.system('{0} setup.py sdist bdist_wheel --universal'.format(sys.executable))
+        self.status('Building Source and Wheel distribution…')
+        os.system('{0} setup.py sdist bdist_wheel'.format(sys.executable))
 
         self.status('Uploading the package to PyPI via Twine…')
-        os.system('twine upload dist')
+        os.system('twine upload --sign dist/*')
 
         self.status('Pushing git tags…')
         os.system('git tag v{0}'.format(about['__version__']))
         os.system('git push --tags')
-        
+
         sys.exit()
 
 
@@ -79,7 +81,7 @@ setup(
     version=about['__version__'],
     description=DESCRIPTION,
     long_description=long_description,
-    long_description_content_type='textmarkdown',
+    long_description_content_type='text/markdown',
     author=AUTHOR,
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
@@ -87,7 +89,7 @@ setup(
     packages=find_packages(exclude=('tests',)),
     install_requires=REQUIRED,
     extras_require=EXTRAS,
-    entry_points={ 
+    entry_points={
         'console_scripts': [
             'fsync=fsync.fsync:main',
         ],
@@ -102,7 +104,8 @@ setup(
         'Topic :: System :: Archiving :: Backup',
         'Topic :: System :: Archiving :: Mirroring',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3.7'
+        'Programming Language :: Python :: 3.7',
+        'Operating System :: OS Independent'
     ],
     cmdclass={
         'upload': UploadCommand,

@@ -1,3 +1,3 @@
 # fsync
 
-**FolderSync**: A simple utility to compare/sync the contents of folders.
+An efficient and easy-to-use utility to compare/synchronize/mirror folder contents.
