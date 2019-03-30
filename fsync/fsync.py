@@ -3,6 +3,7 @@ import argparse
 from pathlib import Path
 import shutil
 import os
+import sys
 
 from tqdm import tqdm
 
@@ -19,14 +20,15 @@ class DirsData:
         self.data_left = DirData(path_left)
         # The items present in right but absent in left.
         self.data_right = DirData(path_right)
-        # The items present on either side but with different contents(hash).
-        self.hash_diff = []
+        # The items present on either side but with different contents.
+        self.content_diff = []
 
 
 class FSync:
-    def __init__(self, dir_path_left, dir_path_right, progress_bar=False):
+    def __init__(self, dir_path_left, dir_path_right, show_progress_bar=False):
         self.dirs_data = DirsData(dir_path_left, dir_path_right)
-        self.progress_bar = progress_bar
+        self.show_progress_bar = show_progress_bar
+        self.progress_bar = None
         if not self.dirs_data.data_left.path.is_dir():
             error_msg = 'Left path "{}" is not a valid directory!'
             error_msg = error_msg.format(self.dirs_data.data_left.path)
@@ -98,7 +100,8 @@ class FSync:
             if left_entry_name == right_entry_name:
                 are_files_same = self._are_files_equal(left_entry, right_entry)
                 if not are_files_same:
-                    self.dirs_data.hash_diff.append((left_entry, right_entry))
+                    self.dirs_data.content_diff.append((left_entry,
+                                                        right_entry))
                 left_iterator += 1
                 right_iterator += 1
                 self._mark_file_visit()
@@ -170,29 +173,48 @@ class FSync:
 
     def _compare_dir_contents(self, left_dir_path, right_dir_path):
         # Need to sort for the merging-type algorithm later on.
-        left_dir_contents = sorted([x for x in left_dir_path.iterdir()])
-        right_dir_contents = sorted([x for x in right_dir_path.iterdir()])
-        self._compare_subfiles(left_dir_contents, right_dir_contents)
-        self._compare_subdirs(left_dir_contents, right_dir_contents)
+        try:
+            left_dir_contents = sorted([x for x in left_dir_path.iterdir()])
+            right_dir_contents = sorted([x for x in right_dir_path.iterdir()])
+            self._compare_subfiles(left_dir_contents, right_dir_contents)
+            self._compare_subdirs(left_dir_contents, right_dir_contents)
+        except Exception as err:
+            print(err, file=sys.stderr)
 
     def check_differences(self):
         '''
         Checks and stores the differences between the 2 directories.
         '''
-        # TODO: Handle recursive structures with symlinks.
         left_dir_path = self.dirs_data.data_left.path
         right_dir_path = self.dirs_data.data_right.path
-        if self.progress_bar:
+        if self.show_progress_bar:
             # Count the total number of files to visit for progress bar.
+            # Although this is not a totally accurate measure of the actual
+            # work to be done, but is a close approximate in the case of the
+            # 2 directories being almost identical to each other (which is
+            # hopefully the most prominent use case). In case the 2 directories
+            # are huge and are totally differently structured, this step will
+            # be totally unnecessary, and its better to hide progress bar
+            # in that case.
+            desc = 'Precomputing directory sizes for progress bar...'
+            self.progress_bar = tqdm(desc=desc, unit=' items')
             left_dir_generator = left_dir_path.rglob('*')
-            left_file_count_recursive = sum(1 for i in left_dir_generator)
+            left_file_count_recursive = 0
+            for i in left_dir_generator:
+                self._mark_file_visit()
+                left_file_count_recursive += 1
             right_dir_generator = right_dir_path.rglob('*')
-            right_file_count_recursive = sum(
-                1 for i in right_dir_generator)
+            right_file_count_recursive = 0
+            for i in right_dir_generator:
+                self._mark_file_visit()
+                right_file_count_recursive += 1
             total_files_count = left_file_count_recursive \
                 + right_file_count_recursive
+            self.progress_bar.close()
+            print('Done!')
             self.progress_bar = tqdm(total=total_files_count,
-                                     desc='Checking differences...')
+                                     desc='Checking differences...',
+                                     unit=' items')
         self._compare_dir_contents(left_dir_path, right_dir_path)
         if self.progress_bar:
             self.progress_bar.close()
@@ -243,7 +265,7 @@ class FSync:
             # We'll swap them again at the end to restore correctness.
             self.dirs_data.data_left, self.dirs_data.data_right = \
                 self.dirs_data.data_right, self.dirs_data.data_left
-        if self.progress_bar:
+        if self.show_progress_bar:
             total_files_count = 0
             # Compute how many files do we need to visit; for the progress bar.
             if add_missing:
@@ -251,12 +273,18 @@ class FSync:
             if remove_extra:
                 total_files_count += len(self.dirs_data.data_right.diff)
             if overwrite:
-                total_files_count += len(self.dirs_data.hash_diff)
+                total_files_count += len(self.dirs_data.content_diff)
             if total_files_count == 0:
                 print('Directories already in sync!')
                 return
             self.progress_bar = tqdm(total=total_files_count,
-                                     desc='Syncing contents...')
+                                     desc='Syncing contents...',
+                                     unit=' items')
+        if remove_extra:
+            items_extra = self.dirs_data.data_right.diff
+            for item in items_extra:
+                self._remove_item(item)
+                self._mark_file_visit()
         if add_missing:
             items_extra = self.dirs_data.data_left.diff
             for item_src in items_extra:
@@ -266,13 +294,8 @@ class FSync:
                 item_dst = dst_base_path / item_relative
                 self._sync_items(item_src, item_dst, overwrite)
                 self._mark_file_visit()
-        if remove_extra:
-            items_extra = self.dirs_data.data_right.diff
-            for item in items_extra:
-                self._remove_item(item)
-                self._mark_file_visit()
         if overwrite:
-            items_common = self.dirs_data.hash_diff
+            items_common = self.dirs_data.content_diff
             for item in items_common:
                 item_src = item[0]
                 item_dst = item[1]
@@ -290,37 +313,38 @@ class FSync:
         '''
         Update the progress bar with 1 more iteraion.
         '''
-        if not self.progress_bar:
-            return
-        self.progress_bar.update()
+        if self.show_progress_bar:
+            self.progress_bar.update()
 
     def get_report(self):
         '''
         Print the difference check report in a human as well as
         machine readable format.
         '''
-        report_string = 'Left directory: "' + \
-            str(self.dirs_data.data_left.path.resolve()) + '"\n'
-        report_string += 'Right directory: "' + \
-            str(self.dirs_data.data_right.path.resolve()) + '"\n\n'
-        report_string += 'Comparison report:\n'
+        num_content_diff = len(self.dirs_data.content_diff)
+        num_left_extra = len(self.dirs_data.data_left.diff)
+        num_right_extra = len(self.dirs_data.data_right.diff)
+        if not (num_content_diff or num_left_extra or num_right_extra):
+            report_string = '\nNo differences found!\n'
+            return report_string
+        report_string = 'Comparison report:\n'
         report_string += '\n' + 'x' * 15 + '\n'
-        report_string += 'Hashes different: (' + str(
-            len(self.dirs_data.hash_diff)) + ')\n'
-        for entry in self.dirs_data.hash_diff:
+        report_string += 'Contents different: (' + str(num_content_diff)\
+                                                 + ')\n'
+        for entry in self.dirs_data.content_diff:
             report_string += '- ' + str(entry[0].relative_to(
                 self.dirs_data.data_left.path)) + '\n'
         report_string += '-' * 15
         report_string += '\n\n' + '[' * 15 + '\n'
         report_string += 'Extra in left: (' + str(
-            len(self.dirs_data.data_left.diff)) + ')\n'
+            num_left_extra) + ')\n'
         for entry in self.dirs_data.data_left.diff:
             report_string += '- ' + str(
                 entry.relative_to(self.dirs_data.data_left.path)) + '\n'
         report_string += '-' * 15
         report_string += '\n\n' + ']' * 15 + '\n'
         report_string += 'Extra in right: (' + str(
-            len(self.dirs_data.data_right.diff)) + ')\n'
+            num_right_extra) + ')\n'
         for entry in self.dirs_data.data_right.diff:
             report_string += '- ' + str(
                 entry.relative_to(self.dirs_data.data_right.path)) + '\n'
@@ -358,36 +382,38 @@ def prepare_args_parser():
     parser.add_argument(
         'right-path', help='The path of the right(destination) directory.')
     parser.add_argument(
-        '-no-pro',
-        '--hide-progress-bar',
-        action='store_true',
-        help='Whether to hide the progress bar or not.')
-    parser.add_argument(
         '-add',
         '--add-missing',
         action='store_true',
         help='Copy files from source which are absent in destination.')
     parser.add_argument(
-        '-remove',
+        '-rm',
         '--remove-extra',
         action='store_true',
         help='Remove the files from destination which are absent in source.')
     parser.add_argument(
-        '-overwrite',
-        '--overwrite-hash',
+        '-ovr',
+        '--overwrite-content',
         action='store_true',
-        help='While syncing, overwrite the files having different hashes')
+        help='Overwrite the files having same name but different content.')
     parser.add_argument(
-        '-reverse',
+        '-rev',
         '--reverse-sync-direction',
         action='store_true',
         help='Use the right folder as source and the left as destination.')
     parser.add_argument(
-        '-mirror',
+        '-mirr',
         '--mirror-contents',
         action='store_true',
         help='Make the destination directory exactly same as the source.\
-            Shorthand for `-add -remove -overwrite`.')
+            Shorthand for `-add -rm -ovr`.')
+    parser.add_argument(
+        '-no-bar',
+        '--hide-progress-bar',
+        action='store_true',
+        help='Whether to hide the progress bar or not. \
+            Will result in a huge speedup iff the 2 directories \
+            are structured very differently.')
     args = parser.parse_args()
     args = vars(args)
     return args
@@ -397,22 +423,24 @@ def main():
     args = prepare_args_parser()
     left_dir_path = args['left-path']
     right_dir_path = args['right-path']
+    print('Left directory = "{}"'.format(Path(left_dir_path).resolve()))
+    print('Right directory = "{}"\n'.format(Path(right_dir_path).resolve()))
     hide_progress_bar = args['hide_progress_bar']
     fsync = FSync(left_dir_path, right_dir_path,
-                  progress_bar=not hide_progress_bar)
+                  show_progress_bar=not hide_progress_bar)
     fsync.check_differences()
     print(fsync.get_report())
     add_missing = args['add_missing']
     remove_extra = args['remove_extra']
-    overwrite_hash = args['overwrite_hash']
+    overwrite_content = args['overwrite_content']
     reverse_direction = args['reverse_sync_direction']
     mirror = args['mirror_contents']
     if mirror:
         add_missing = True
         remove_extra = True
-        overwrite_hash = True
-    if add_missing or remove_extra or overwrite_hash:
-        fsync.sync_dirs(overwrite_hash, add_missing, remove_extra,
+        overwrite_content = True
+    if add_missing or remove_extra or overwrite_content:
+        fsync.sync_dirs(overwrite_content, add_missing, remove_extra,
                         reverse_direction)
     print('')
 
