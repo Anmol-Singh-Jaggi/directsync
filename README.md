@@ -45,7 +45,7 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
  - `pip install fsync`
 
 **ToDo:**
- - Add demo.
+ - ~~Add demo.~~
  - Add `preserve-latest` option: Among the 2 files, the one with the latest modification date should be preserved.
  - Add `quiet` option.
  - ~~Add `simulate` option.~~
