@@ -47,7 +47,7 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
  - Add `ignore-pattern` option to let the user ignore certain files based on the regex pattern provided.
  - Add test cases.
  - Add code coverage.
- - Use `tox` to test under multiple Python versions.  
+ - Setup `tox` and `Travis CI`.
  - Handle nested structures with symlinks.
  - Provide direct interface with online storage services.
 
