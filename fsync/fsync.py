@@ -213,7 +213,7 @@ class FSync:
             self.progress_bar.close()
             print('Done!')
             self.progress_bar = tqdm(total=total_files_count,
-                                     desc='Checking differences...',
+                                     desc='Checking differences',
                                      unit=' items')
         self._compare_dir_contents(left_dir_path, right_dir_path)
         if self.progress_bar:
@@ -249,7 +249,7 @@ class FSync:
                 item.unlink()
 
     def sync_dirs(self, overwrite=False, add_missing=False,
-                  remove_extra=False, reverse_direction=False):
+                  remove_extra=False, reverse_direction=False, dry_run=False):
         '''
         Synchronize the directories based on the arguments passed:
         `overwrite`: Whether to overwrite files in destination whose content
@@ -259,6 +259,7 @@ class FSync:
         `remove_extra`: Whether to remove files from the destination which are
                         absent from the source.
         `reverse_direction`: If true, copies from right dir to left dir.
+        `dry_run`: If true, then just print the operations to be performed.
         '''
         if reverse_direction:
             # Just swap the data of the 2 directories.
@@ -277,37 +278,73 @@ class FSync:
             if total_files_count == 0:
                 print('Directories already in sync!')
                 return
+            desc = 'Syncing contents'
+            if dry_run:
+                desc += ' (dry-run)'
             self.progress_bar = tqdm(total=total_files_count,
-                                     desc='Syncing contents...',
+                                     desc=desc,
                                      unit=' items')
-        if remove_extra:
+
+        dry_run_report = '\n**Dry run** report:'
+        dry_run_header = '\n\n' + '>' * 25
+        dry_run_footer = '<' * 25
+        if remove_extra and len(self.dirs_data.data_right.diff):
+            dry_run_report += dry_run_header
+            dry_run_report += '\nWill be removed: ({})\n'.format(
+                               len(self.dirs_data.data_right.diff))
             items_extra = self.dirs_data.data_right.diff
             for item in items_extra:
-                self._remove_item(item)
+                if dry_run:
+                    dry_run_report += ' - "{}"\n'.format(item)
+                else:
+                    self._remove_item(item)
                 self._mark_file_visit()
-        if add_missing:
+            dry_run_report += dry_run_footer
+        if add_missing and len(self.dirs_data.data_left.diff):
+            dry_run_report += dry_run_header
+            dry_run_report += '\nWill be copied'
+            if overwrite:
+                dry_run_report += ' (overwritten if present)'
+            else:
+                dry_run_report += ' (unchanged if already existing)'
+            dry_run_report += ': ({})\n'.format(
+                              len(self.dirs_data.data_left.diff))
             items_extra = self.dirs_data.data_left.diff
             for item_src in items_extra:
                 src_base_path = self.dirs_data.data_left.path
                 dst_base_path = self.dirs_data.data_right.path
                 item_relative = item_src.relative_to(src_base_path)
                 item_dst = dst_base_path / item_relative
-                self._sync_items(item_src, item_dst, overwrite)
+                if dry_run:
+                    dry_run_report += ' - "{}" -> "{}"\n'.format(item_src,
+                                                                 item_dst)
+                else:
+                    self._sync_items(item_src, item_dst, overwrite)
                 self._mark_file_visit()
-        if overwrite:
+            dry_run_report += dry_run_footer
+        if overwrite and len(self.dirs_data.content_diff):
+            dry_run_report += dry_run_header
+            dry_run_report += '\nWill be overwritten: ({})\n'.format(
+                              len(self.dirs_data.content_diff))
             items_common = self.dirs_data.content_diff
             for item in items_common:
                 item_src = item[0]
                 item_dst = item[1]
                 if reverse_direction:
                     item_src, item_dst = item_dst, item_src
-                self._sync_items(item_src, item_dst, True)
+                if dry_run:
+                    dry_run_report += ' - "{}" -> "{}"\n'.format(item_src,
+                                                                 item_dst)
+                else:
+                    self._sync_items(item_src, item_dst, True)
                 self._mark_file_visit()
+            dry_run_report += dry_run_footer
         if self.progress_bar:
             self.progress_bar.close()
         # Swap them again to restore correctness.
         self.dirs_data.data_left, self.dirs_data.data_right = \
             self.dirs_data.data_right, self.dirs_data.data_left
+        return dry_run_report
 
     def _mark_file_visit(self):
         '''
@@ -328,27 +365,27 @@ class FSync:
             report_string = '\nNo differences found!\n'
             return report_string
         report_string = 'Comparison report:\n'
-        report_string += '\n' + 'x' * 15 + '\n'
+        report_string += '\n' + 'x' * 25 + '\n'
         report_string += 'Contents different: (' + str(num_content_diff)\
                                                  + ')\n'
         for entry in self.dirs_data.content_diff:
             report_string += '- ' + str(entry[0].relative_to(
                 self.dirs_data.data_left.path)) + '\n'
-        report_string += '-' * 15
-        report_string += '\n\n' + '[' * 15 + '\n'
+        report_string += '-' * 25
+        report_string += '\n\n' + '[' * 25 + '\n'
         report_string += 'Extra in left: (' + str(
             num_left_extra) + ')\n'
         for entry in self.dirs_data.data_left.diff:
             report_string += '- ' + str(
                 entry.relative_to(self.dirs_data.data_left.path)) + '\n'
-        report_string += '-' * 15
-        report_string += '\n\n' + ']' * 15 + '\n'
+        report_string += '-' * 25
+        report_string += '\n\n' + ']' * 25 + '\n'
         report_string += 'Extra in right: (' + str(
             num_right_extra) + ')\n'
         for entry in self.dirs_data.data_right.diff:
             report_string += '- ' + str(
                 entry.relative_to(self.dirs_data.data_right.path)) + '\n'
-        report_string += '-' * 15 + '\n\n'
+        report_string += '-' * 25 + '\n\n'
         return report_string
 
 
@@ -408,6 +445,12 @@ def prepare_args_parser():
         help='Make the destination directory exactly same as the source.\
             Shorthand for `-add -rm -ovr`.')
     parser.add_argument(
+        '-dry',
+        '--dry-run',
+        action='store_true',
+        help='Just simulate and report the file operations that will be\
+              performed with the current configuration.')
+    parser.add_argument(
         '-no-bar',
         '--hide-progress-bar',
         action='store_true',
@@ -435,13 +478,17 @@ def main():
     overwrite_content = args['overwrite_content']
     reverse_direction = args['reverse_sync_direction']
     mirror = args['mirror_contents']
+    dry_run = args['dry_run']
     if mirror:
         add_missing = True
         remove_extra = True
         overwrite_content = True
     if add_missing or remove_extra or overwrite_content:
-        fsync.sync_dirs(overwrite_content, add_missing, remove_extra,
-                        reverse_direction)
+        dry_run_report = fsync.sync_dirs(overwrite_content, add_missing,
+                                         remove_extra, reverse_direction,
+                                         dry_run)
+        if dry_run:
+            print(dry_run_report)
     print('')
 
 
