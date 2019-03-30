@@ -1,5 +1,8 @@
 # fsync
 
+[![PyPI version](https://badge.fury.io/py/fsync.svg)](https://badge.fury.io/py/fsync)
+![MIT License](https://img.shields.io/badge/license-MIT-green.svg)
+
 An efficient and easy-to-use utility to compare/synchronize/mirror folder contents.
 
 **Usage:**
@@ -41,6 +44,8 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
  - Add `cache` option to cache the results of the previous difference check. Will need to serialize data to file.
  - Give more fine-tuned control of file comparison algorithm to the user.
  - Add `ignore-pattern` option to let the user ignore certain files based on the regex pattern provided.
+ - Add tests.
+ - Add code coverage.
  - Handle nested structures with symlinks.
  - Provide direct interface with online storage services.
 
