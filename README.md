@@ -12,7 +12,7 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
 
 **Usage:**
 
-    fsync [-h] [-no-bar] [-add] [-rm] [-ovr] [-rev] [-mirr]
+    fsync [-h] [-no-bar] [-add] [-rm] [-ovr] [-rev] [-mirr] [-dry]
                 left-path right-path
 
     positional arguments:
