@@ -371,7 +371,7 @@ def prepare_args_parser():
     description = 'fsync: An efficient and easy-to-use utility to'
     description += ' compare/synchronize/mirror folder contents.\n'
     description += 'Version ' + str(get_version()) + '\n'
-    epilog = 'Copyright (C) 2019 Anmol Singh Jaggi'
+    epilog = 'Copyright (c) 2019 Anmol Singh Jaggi'
     epilog += '\nhttps://anmol-singh-jaggi.github.io'
     epilog += '\nMIT License'
     parser = argparse.ArgumentParser(

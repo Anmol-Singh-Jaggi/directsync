@@ -45,6 +45,6 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
  - Provide direct interface with online storage services.
 
 
-Copyright (C) 2019 Anmol Singh Jaggi  
+Copyright (c) 2019 Anmol Singh Jaggi  
 https://anmol-singh-jaggi.github.io  
 MIT License
