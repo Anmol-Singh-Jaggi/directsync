@@ -15,7 +15,8 @@ REQUIRES_PYTHON = '>=3.7.0'
 VERSION = ''
 
 REQUIRED = [
-    'tqdm'
+    'tqdm',
+    'binaryornot'
 ]
 
 EXTRAS = {

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-import argparse
 from pathlib import Path
 import shutil
-import os
 import sys
 
 from tqdm import tqdm
+
+from file_comparison import is_file_text, compare_file_contents_buffered
+from args_parsing import prepare_args_parser
 
 
 class DirData:
@@ -38,25 +39,6 @@ class FSync:
             error_msg = error_msg.format(self.dirs_data.data_right.path)
             raise Exception(error_msg)
 
-    def _is_file_text(self, file_path):
-        try:
-            with open(file_path, "rt") as f:
-                f.read(3)
-            return True
-        except UnicodeDecodeError:
-            return False
-
-    def _compare_file_contents_buffered(self, path1, path2):
-        buffer_size = 100000
-        with open(path1, 'rb') as fp1, open(path2, 'rb') as fp2:
-            while True:
-                path1_bytes = fp1.read(buffer_size)
-                path2_bytes = fp2.read(buffer_size)
-                if path1_bytes != path2_bytes:
-                    return False
-                if not path1_bytes:
-                    return True
-
     def _are_files_equal(self, path_left, path_right):
         # First check the file sizes.
         left_size = path_left.stat().st_size
@@ -64,14 +46,18 @@ class FSync:
         if left_size != right_size:
             # If file sizes are different, then return straightaway!
             return False
-        if not self._is_file_text(path_left):
+        if not is_file_text(path_left):
+            if is_file_text(path_right):
+                return False
             if left_size > 1000000:
-                # Assume huge binary files have the same content
-                # for performance.
+                # Assume huge binary files with the same size
+                # have the same content for performance.
                 return True
         # If file size is same, and the files are text/small binaries,
         # then compare their contents.
-        return self._compare_file_contents_buffered(path_left, path_right)
+        diagn = str(path_left) + ' ' + str(left_size) + ' ' + str(is_file_text(path_left))
+        #print(diagn)
+        return compare_file_contents_buffered(path_left, path_right)
 
     def _compare_subfiles(self, left_dir_contents, right_dir_contents):
         '''
@@ -179,7 +165,8 @@ class FSync:
             self._compare_subfiles(left_dir_contents, right_dir_contents)
             self._compare_subdirs(left_dir_contents, right_dir_contents)
         except Exception as err:
-            print(err, file=sys.stderr)
+            log_msg = '\nError while comparing directories: {}'.format(err)
+            print(log_msg, file=sys.stderr)
 
     def check_differences(self):
         '''
@@ -387,79 +374,6 @@ class FSync:
                 entry.relative_to(self.dirs_data.data_right.path)) + '\n'
         report_string += '-' * 25 + '\n\n'
         return report_string
-
-
-def get_version():
-    '''
-    Read the current version from the version file to show in
-    the help section.
-    '''
-    about = {}
-    here = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(here, '__version__.py')) as f:
-        exec(f.read(), about)
-    return about['__version__']
-
-
-def prepare_args_parser():
-    '''
-    Construct and return the argument parser object.
-    '''
-    description = 'fsync: An efficient and easy-to-use utility to'
-    description += ' compare/synchronize/mirror folder contents.\n'
-    description += 'Version ' + str(get_version()) + '\n'
-    epilog = 'Copyright (c) 2019 Anmol Singh Jaggi'
-    epilog += '\nhttps://anmol-singh-jaggi.github.io'
-    epilog += '\nMIT License'
-    parser = argparse.ArgumentParser(
-        description=description, prog='fsync', epilog=epilog,
-        formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument(
-        'left-path', help='The path of the left(source) directory.')
-    parser.add_argument(
-        'right-path', help='The path of the right(destination) directory.')
-    parser.add_argument(
-        '-add',
-        '--add-missing',
-        action='store_true',
-        help='Copy files from source which are absent in destination.')
-    parser.add_argument(
-        '-rm',
-        '--remove-extra',
-        action='store_true',
-        help='Remove the files from destination which are absent in source.')
-    parser.add_argument(
-        '-ovr',
-        '--overwrite-content',
-        action='store_true',
-        help='Overwrite the files having same name but different content.')
-    parser.add_argument(
-        '-rev',
-        '--reverse-sync-direction',
-        action='store_true',
-        help='Use the right folder as source and the left as destination.')
-    parser.add_argument(
-        '-mirr',
-        '--mirror-contents',
-        action='store_true',
-        help='Make the destination directory exactly same as the source.\
-            Shorthand for `-add -rm -ovr`.')
-    parser.add_argument(
-        '-dry',
-        '--dry-run',
-        action='store_true',
-        help='Just simulate and report the file operations that will be\
-              performed with the current configuration.')
-    parser.add_argument(
-        '-no-bar',
-        '--hide-progress-bar',
-        action='store_true',
-        help='Whether to hide the progress bar or not. \
-            Will result in a huge speedup iff the 2 directories \
-            are structured very differently.')
-    args = parser.parse_args()
-    args = vars(args)
-    return args
 
 
 def main():

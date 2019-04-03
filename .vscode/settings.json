@@ -1,0 +1,4 @@
+{
+    "python.pythonPath": "D:\\anmol\\Software\\Windows\\Dev\\python\\python.exe",
+    "python.envFile": "${workspaceFolder}/env.txt"
+}
