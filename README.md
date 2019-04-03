@@ -1,18 +1,18 @@
-# fsync
+# DirectSync
 
-[![PyPI version](https://badge.fury.io/py/fsync.svg)](https://badge.fury.io/py/fsync)
-![MIT License](https://img.shields.io/badge/license-MIT-orange.svg)
+[![PyPI version](https://badge.fury.io/py/directsync.svg)](https://badge.fury.io/py/directsync)
+![MIT License](https://img.shields.io/badge/license-MIT-green.svg)
 [![image](https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg)](https://saythanks.io/to/Anmol-Singh-Jaggi)
 
 An efficient and easy-to-use utility to compare/synchronize/mirror folder contents.
 
 **Demo**
 
-![FSync demo gif](docs/demo.gif)
+![Demo gif](docs/demo.gif)
 
 **Usage:**
 
-    fsync [-h] [-no-bar] [-add] [-rm] [-ovr] [-rev] [-mirr] [-dry]
+    directsync [-h] [-no-bar] [-add] [-rm] [-ovr] [-rev] [-mirr] [-dry]
                 left-path right-path
 
     positional arguments:
@@ -42,7 +42,7 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
                         very differently.
 
 **Installation:**
- - `pip install fsync`
+ - `pip install directsync`
 
 **ToDo:**
  - ~~Add demo.~~

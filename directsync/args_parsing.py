@@ -18,7 +18,7 @@ def prepare_args_parser():
     '''
     Construct and return the argument parser object.
     '''
-    description = 'fsync: An efficient and easy-to-use utility to'
+    description = 'DirectSync: An efficient and easy-to-use utility to'
     description += ' compare/synchronize/mirror folder contents.\n'
     description += 'Version ' + str(_get_version()) + '\n'
     epilog = 'Copyright (c) 2019 Anmol Singh Jaggi'
@@ -26,7 +26,7 @@ def prepare_args_parser():
     epilog += '\nMIT License'
     parser = argparse.ArgumentParser(
         description=description,
-        prog='fsync',
+        prog='directsync',
         epilog=epilog,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(

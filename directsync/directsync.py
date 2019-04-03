@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from pathlib import Path
 import shutil
 import sys
@@ -25,7 +24,7 @@ class DirsData:
         self.content_diff = []
 
 
-class FSync:
+class DirectSync:
     def __init__(self, dir_path_left, dir_path_right, show_progress_bar=False):
         self.dirs_data = DirsData(dir_path_left, dir_path_right)
         self.show_progress_bar = show_progress_bar
@@ -55,8 +54,6 @@ class FSync:
                 return True
         # If file size is same, and the files are text/small binaries,
         # then compare their contents.
-        diagn = str(path_left) + ' ' + str(left_size) + ' ' + str(is_file_text(path_left))
-        #print(diagn)
         return compare_file_contents_buffered(path_left, path_right)
 
     def _compare_subfiles(self, left_dir_contents, right_dir_contents):
@@ -383,10 +380,10 @@ def main():
     print('Left directory = "{}"'.format(Path(left_dir_path).resolve()))
     print('Right directory = "{}"\n'.format(Path(right_dir_path).resolve()))
     hide_progress_bar = args['hide_progress_bar']
-    fsync = FSync(left_dir_path, right_dir_path,
-                  show_progress_bar=not hide_progress_bar)
-    fsync.check_differences()
-    print(fsync.get_report())
+    direct_sync = DirectSync(left_dir_path, right_dir_path,
+                             show_progress_bar=not hide_progress_bar)
+    direct_sync.check_differences()
+    print(direct_sync.get_report())
     add_missing = args['add_missing']
     remove_extra = args['remove_extra']
     overwrite_content = args['overwrite_content']
@@ -398,9 +395,9 @@ def main():
         remove_extra = True
         overwrite_content = True
     if add_missing or remove_extra or overwrite_content:
-        dry_run_report = fsync.sync_dirs(overwrite_content, add_missing,
-                                         remove_extra, reverse_direction,
-                                         dry_run)
+        dry_run_report = direct_sync.sync_dirs(overwrite_content, add_missing,
+                                               remove_extra, reverse_direction,
+                                               dry_run)
         if dry_run:
             print(dry_run_report)
     print('')

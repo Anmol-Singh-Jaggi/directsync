@@ -6,9 +6,9 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 # Package meta-data.
-NAME = 'fsync'
+NAME = 'directsync'
 DESCRIPTION = 'Compare(*diff*)/synchronize/backup/mirror folders quickly.'
-URL = 'https://github.com/Anmol-Singh-Jaggi/fsync.git'
+URL = 'https://github.com/Anmol-Singh-Jaggi/directsync.git'
 EMAIL = 'anmolj.65@gmail.com'
 AUTHOR = 'Anmol Singh Jaggi'
 REQUIRES_PYTHON = '>=3.7.0'
@@ -92,7 +92,7 @@ setup(
     extras_require=EXTRAS,
     entry_points={
         'console_scripts': [
-            'fsync=fsync.fsync:main',
+            'directsync=directsync.directsync:main',
         ],
     },
     include_package_data=True,
