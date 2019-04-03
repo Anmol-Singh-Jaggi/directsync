@@ -60,6 +60,11 @@ def prepare_args_parser():
         help='Make the destination directory exactly same as the source.\
             Shorthand for `-add -rm -ovr`.')
     parser.add_argument(
+        '-trash',
+        '--use-trash',
+        action='store_true',
+        help='Send to trash/recycle bin while deleting/overwriting.')
+    parser.add_argument(
         '-dry',
         '--dry-run',
         action='store_true',

@@ -1,11 +1,14 @@
 from pathlib import Path
 import shutil
-import sys
+import logging
 
 from tqdm import tqdm
+from send2trash import send2trash
 
 from file_comparison import is_file_text, compare_file_contents_buffered
 from args_parsing import prepare_args_parser
+
+logger = logging.getLogger(__file__)
 
 
 class DirData:
@@ -163,7 +166,7 @@ class DirectSync:
             self._compare_subdirs(left_dir_contents, right_dir_contents)
         except Exception as err:
             log_msg = '\nError while comparing directories: {}'.format(err)
-            print(log_msg, file=sys.stderr)
+            logger.exception(log_msg)
 
     def check_differences(self):
         '''
@@ -196,14 +199,15 @@ class DirectSync:
                 + right_file_count_recursive
             self.progress_bar.close()
             print('Done!')
-            self.progress_bar = tqdm(total=total_files_count,
-                                     desc='Checking differences',
-                                     unit=' items')
+            self.progress_bar = tqdm(
+                total=total_files_count,
+                desc='Checking differences',
+                unit=' items')
         self._compare_dir_contents(left_dir_path, right_dir_path)
         if self.progress_bar:
             self.progress_bar.close()
 
-    def _sync_items(self, item1, item2, overwrite=False):
+    def _sync_items(self, item1, item2, overwrite=False, use_trash=False):
         '''
         Synchronize two files/directories.
         `overwrite`: Whether to overwrite item1 on item2 if present.
@@ -217,23 +221,37 @@ class DirectSync:
             elif overwrite:
                 if item1.is_dir():
                     if item2.exists():
-                        shutil.rmtree(item2)
+                        shutil.rmtree(item2) if not use_trash\
+                            else send2trash(str(item2.resolve()))
                     shutil.copytree(item1, item2)
                 else:
+                    if item2.exists() and use_trash:
+                        send2trash(str(item2.resolve()))
                     shutil.copyfile(item1, item2)
 
-    def _remove_item(self, item):
+    def _remove_item(self, item, use_trash=False):
         '''
         Helper function to remove a file/directory.
         '''
         if item.exists():
             if item.is_dir():
-                shutil.rmtree(item)
+                if use_trash:
+                    send2trash(str(item.resolve()))
+                else:
+                    shutil.rmtree(item)
             else:
-                item.unlink()
+                if use_trash:
+                    send2trash(str(item.resolve()))
+                else:
+                    item.unlink()
 
-    def sync_dirs(self, overwrite=False, add_missing=False,
-                  remove_extra=False, reverse_direction=False, dry_run=False):
+    def sync_dirs(self,
+                  overwrite=False,
+                  add_missing=False,
+                  remove_extra=False,
+                  reverse_direction=False,
+                  dry_run=False,
+                  use_trash=False):
         '''
         Synchronize the directories based on the arguments passed:
         `overwrite`: Whether to overwrite files in destination whose content
@@ -265,9 +283,8 @@ class DirectSync:
             desc = 'Syncing contents'
             if dry_run:
                 desc += ' (dry-run)'
-            self.progress_bar = tqdm(total=total_files_count,
-                                     desc=desc,
-                                     unit=' items')
+            self.progress_bar = tqdm(
+                total=total_files_count, desc=desc, unit=' items')
 
         dry_run_report = '\n**Dry run** report:'
         dry_run_header = '\n\n' + '>' * 25
@@ -275,13 +292,13 @@ class DirectSync:
         if remove_extra and len(self.dirs_data.data_right.diff):
             dry_run_report += dry_run_header
             dry_run_report += '\nWill be removed: ({})\n'.format(
-                               len(self.dirs_data.data_right.diff))
+                len(self.dirs_data.data_right.diff))
             items_extra = self.dirs_data.data_right.diff
             for item in items_extra:
                 if dry_run:
                     dry_run_report += ' - "{}"\n'.format(item)
                 else:
-                    self._remove_item(item)
+                    self._remove_item(item, use_trash)
                 self._mark_file_visit()
             dry_run_report += dry_run_footer
         if add_missing and len(self.dirs_data.data_left.diff):
@@ -292,7 +309,7 @@ class DirectSync:
             else:
                 dry_run_report += ' (unchanged if already existing)'
             dry_run_report += ': ({})\n'.format(
-                              len(self.dirs_data.data_left.diff))
+                len(self.dirs_data.data_left.diff))
             items_extra = self.dirs_data.data_left.diff
             for item_src in items_extra:
                 src_base_path = self.dirs_data.data_left.path
@@ -300,16 +317,16 @@ class DirectSync:
                 item_relative = item_src.relative_to(src_base_path)
                 item_dst = dst_base_path / item_relative
                 if dry_run:
-                    dry_run_report += ' - "{}" -> "{}"\n'.format(item_src,
-                                                                 item_dst)
+                    dry_run_report += ' - "{}" -> "{}"\n'.format(
+                        item_src, item_dst)
                 else:
-                    self._sync_items(item_src, item_dst, overwrite)
+                    self._sync_items(item_src, item_dst, overwrite, use_trash)
                 self._mark_file_visit()
             dry_run_report += dry_run_footer
         if overwrite and len(self.dirs_data.content_diff):
             dry_run_report += dry_run_header
             dry_run_report += '\nWill be overwritten: ({})\n'.format(
-                              len(self.dirs_data.content_diff))
+                len(self.dirs_data.content_diff))
             items_common = self.dirs_data.content_diff
             for item in items_common:
                 item_src = item[0]
@@ -317,10 +334,10 @@ class DirectSync:
                 if reverse_direction:
                     item_src, item_dst = item_dst, item_src
                 if dry_run:
-                    dry_run_report += ' - "{}" -> "{}"\n'.format(item_src,
-                                                                 item_dst)
+                    dry_run_report += ' - "{}" -> "{}"\n'.format(
+                        item_src, item_dst)
                 else:
-                    self._sync_items(item_src, item_dst, True)
+                    self._sync_items(item_src, item_dst, True, use_trash)
                 self._mark_file_visit()
             dry_run_report += dry_run_footer
         if self.progress_bar:
@@ -357,15 +374,13 @@ class DirectSync:
                 self.dirs_data.data_left.path)) + '\n'
         report_string += '-' * 25
         report_string += '\n\n' + '[' * 25 + '\n'
-        report_string += 'Extra in left: (' + str(
-            num_left_extra) + ')\n'
+        report_string += 'Extra in left: (' + str(num_left_extra) + ')\n'
         for entry in self.dirs_data.data_left.diff:
             report_string += '- ' + str(
                 entry.relative_to(self.dirs_data.data_left.path)) + '\n'
         report_string += '-' * 25
         report_string += '\n\n' + ']' * 25 + '\n'
-        report_string += 'Extra in right: (' + str(
-            num_right_extra) + ')\n'
+        report_string += 'Extra in right: (' + str(num_right_extra) + ')\n'
         for entry in self.dirs_data.data_right.diff:
             report_string += '- ' + str(
                 entry.relative_to(self.dirs_data.data_right.path)) + '\n'
@@ -380,8 +395,8 @@ def main():
     print('Left directory = "{}"'.format(Path(left_dir_path).resolve()))
     print('Right directory = "{}"\n'.format(Path(right_dir_path).resolve()))
     hide_progress_bar = args['hide_progress_bar']
-    direct_sync = DirectSync(left_dir_path, right_dir_path,
-                             show_progress_bar=not hide_progress_bar)
+    direct_sync = DirectSync(
+        left_dir_path, right_dir_path, show_progress_bar=not hide_progress_bar)
     direct_sync.check_differences()
     print(direct_sync.get_report())
     add_missing = args['add_missing']
@@ -389,6 +404,7 @@ def main():
     overwrite_content = args['overwrite_content']
     reverse_direction = args['reverse_sync_direction']
     mirror = args['mirror_contents']
+    use_trash = args['use_trash']
     dry_run = args['dry_run']
     if mirror:
         add_missing = True
@@ -397,7 +413,7 @@ def main():
     if add_missing or remove_extra or overwrite_content:
         dry_run_report = direct_sync.sync_dirs(overwrite_content, add_missing,
                                                remove_extra, reverse_direction,
-                                               dry_run)
+                                               dry_run, use_trash)
         if dry_run:
             print(dry_run_report)
     print('')
