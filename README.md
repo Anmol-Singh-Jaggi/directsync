@@ -60,7 +60,3 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
  - Add coloured output.
  - Handle nested structures with symlinks.
  - Provide direct interface with online storage services.
-
-Copyright (c) 2019 Anmol Singh Jaggi  
-https://anmol-singh-jaggi.github.io  
-MIT License
