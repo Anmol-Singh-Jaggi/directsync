@@ -5,8 +5,8 @@ import logging
 from tqdm import tqdm
 from send2trash import send2trash
 
-from file_comparison import is_file_text, compare_file_contents_buffered
-from args_parsing import prepare_args_parser
+from .file_comparison import is_file_text, compare_file_contents_buffered
+from .args_parsing import prepare_args_parser
 
 logger = logging.getLogger(__file__)
 

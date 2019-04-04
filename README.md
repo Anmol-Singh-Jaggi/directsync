@@ -46,11 +46,7 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
  - `pip install directsync`
 
 **ToDo:**
- - ~~Add demo.~~
  - Add `preserve-latest` option: Among the 2 files, the one with the latest modification date should be preserved.
- - Add `quiet` option.
- - ~~Add `simulate` option.~~
- - Add ~~`use-trash`~~ option to send to recycle bin instead of delete/overwrite.
  - Add `cache` option to cache the results of the previous difference check. Will need to serialize data to file.
  - Give more fine-tuned control of file comparison algorithm to the user.
  - Add `ignore-pattern` option to let the user ignore certain files based on the regex pattern provided.
@@ -60,3 +56,6 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
  - Add coloured output.
  - Handle nested structures with symlinks.
  - Provide direct interface with online storage services.
+ - ~~Add demo.~~
+ - ~~Add `simulate` option.~~
+ - ~~Add `use-trash` option to send to recycle bin instead of delete/overwrite.~~

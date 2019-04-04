@@ -11,7 +11,7 @@ DESCRIPTION = 'Compare(*diff*)/synchronize/backup/mirror folders quickly.'
 URL = 'https://github.com/Anmol-Singh-Jaggi/directsync.git'
 EMAIL = 'anmolj.65@gmail.com'
 AUTHOR = 'Anmol Singh Jaggi'
-REQUIRES_PYTHON = '>=3.6.0'
+REQUIRES_PYTHON = '>=3.4.0'
 VERSION = ''
 
 REQUIRED = [
