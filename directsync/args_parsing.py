@@ -65,6 +65,12 @@ def prepare_args_parser():
         action='store_true',
         help='Send to trash/recycle bin while deleting/overwriting.')
     parser.add_argument(
+        '-cache',
+        '--use-cache',
+        action='store_true',
+        help='Whether to use previously cached comparison-check result from\
+            disk.')
+    parser.add_argument(
         '-dry',
         '--dry-run',
         action='store_true',

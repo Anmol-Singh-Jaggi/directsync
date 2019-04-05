@@ -8,12 +8,13 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
 
 **Demo**
 
-![Demo gif](docs/demo.gif)
+![Demo gif](https://github.com/Anmol-Singh-Jaggi/directsync/raw/master/docs/demo.gif)
 
 **Usage:**
 
-    directsync [-h] [-no-bar] [-add] [-rm] [-ovr] [-rev] [-mirr] [-trash] [-dry]
-                left-path right-path
+    directsync [-h] [-add] [-rm] [-ovr] [-rev] [-mirr] [-trash] [-cache]
+               [-dry] [-no-bar]
+               left-path right-path
 
     positional arguments:
     left-path             The path of the left(source) directory.
@@ -35,6 +36,8 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
                             Make the destination directory exactly same as the
                             source. Shorthand for `-add -rm -ovr`.
       -trash, --use-trash   Send to trash/recycle bin while deleting/overwriting.
+      -cache, --use-cache   Whether to use previously cached comparison-check
+                            result from disk.
       -dry, --dry-run       Just simulate and report the file operations that will
                             be performed with the current configuration.
       -no-bar, --hide-progress-bar
@@ -47,7 +50,6 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
 
 **ToDo:**
  - Add `preserve-latest` option: Among the 2 files, the one with the latest modification date should be preserved.
- - Add `cache` option to cache the results of the previous difference check. Will need to serialize data to file.
  - Give more fine-tuned control of file comparison algorithm to the user.
  - Add `ignore-pattern` option to let the user ignore certain files based on the regex pattern provided.
  - Add test cases.
@@ -56,6 +58,8 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
  - Add coloured output.
  - Handle nested structures with symlinks.
  - Provide direct interface with online storage services.
+ - Add developer guidelines.
  - ~~Add demo.~~
  - ~~Add `simulate` option.~~
  - ~~Add `use-trash` option to send to recycle bin instead of delete/overwrite.~~
+ - ~~Add `cache` option to cache the results of the previous difference check to disk.~~

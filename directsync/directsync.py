@@ -7,6 +7,8 @@ from send2trash import send2trash
 
 from .file_comparison import is_file_text, compare_file_contents_buffered
 from .args_parsing import prepare_args_parser
+from .serialization import serialize_directsync, deserialize_directsync,\
+                           get_serialization_filepath
 
 logger = logging.getLogger(__file__)
 
@@ -58,6 +60,17 @@ class DirectSync:
         # If file size is same, and the files are text/small binaries,
         # then compare their contents.
         return compare_file_contents_buffered(path_left, path_right)
+
+    def __getstate__(self):
+        '''
+        Specify what attributes to serialize.
+        Needed to tell pickle to ignore `self.progress_bar`
+        as `tqdm()` objects cannot be serialized.
+        '''
+        def should_pickle(attr_key):
+            return 'progress' not in attr_key
+
+        return {k: v for k, v in self.__dict__.items() if should_pickle(k)}
 
     def _compare_subfiles(self, left_dir_contents, right_dir_contents):
         '''
@@ -198,7 +211,6 @@ class DirectSync:
             total_files_count = left_file_count_recursive \
                 + right_file_count_recursive
             self.progress_bar.close()
-            print('Done!')
             self.progress_bar = tqdm(
                 total=total_files_count,
                 desc='Checking differences',
@@ -278,8 +290,7 @@ class DirectSync:
             if overwrite:
                 total_files_count += len(self.dirs_data.content_diff)
             if total_files_count == 0:
-                print('Directories already in sync!')
-                return
+                return 'Directories already in sync!'
             desc = 'Syncing contents'
             if dry_run:
                 desc += ' (dry-run)'
@@ -342,9 +353,10 @@ class DirectSync:
             dry_run_report += dry_run_footer
         if self.progress_bar:
             self.progress_bar.close()
-        # Swap them again to restore correctness.
-        self.dirs_data.data_left, self.dirs_data.data_right = \
-            self.dirs_data.data_right, self.dirs_data.data_left
+        if reverse_direction:
+            # Swap them again to restore correctness.
+            self.dirs_data.data_left, self.dirs_data.data_right = \
+                self.dirs_data.data_right, self.dirs_data.data_left
         return dry_run_report
 
     def _mark_file_visit(self):
@@ -397,7 +409,15 @@ def main():
     hide_progress_bar = args['hide_progress_bar']
     direct_sync = DirectSync(
         left_dir_path, right_dir_path, show_progress_bar=not hide_progress_bar)
-    direct_sync.check_differences()
+    use_cache = args['use_cache']
+    if use_cache and get_serialization_filepath(direct_sync).exists():
+        print('Loading from cache!\n')
+        direct_sync = deserialize_directsync(direct_sync)
+        direct_sync.show_progress_bar = not hide_progress_bar
+    else:
+        direct_sync.check_differences()
+        print('Creating cache!\n')
+        serialize_directsync(direct_sync)
     print(direct_sync.get_report())
     add_missing = args['add_missing']
     remove_extra = args['remove_extra']
@@ -416,6 +436,9 @@ def main():
                                                dry_run, use_trash)
         if dry_run:
             print(dry_run_report)
+        # Delete cache as it has been possibly invalidated.
+        if not dry_run and get_serialization_filepath(direct_sync).exists():
+            get_serialization_filepath(direct_sync).unlink()
     print('')
 
 
