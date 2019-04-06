@@ -93,7 +93,7 @@ setup(
     extras_require=EXTRAS,
     entry_points={
         'console_scripts': [
-            'directsync=directsync.directsync:main',
+            'directsync=directsync.__main__:main',
         ],
     },
     include_package_data=True,
