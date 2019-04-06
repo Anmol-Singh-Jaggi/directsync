@@ -13,7 +13,7 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
 **Usage:**
 
     directsync [-h] [-add] [-rm] [-ovr] [-rev] [-mirr] [-trash] [-cache]
-               [-dry] [-no-bar]
+               [-latest] [-dry] [-no-bar]
                left-path right-path
 
     positional arguments:
@@ -38,6 +38,9 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
       -trash, --use-trash   Send to trash/recycle bin while deleting/overwriting.
       -cache, --use-cache   Whether to use previously cached comparison-check
                             result from disk.
+      -latest, --preserve-latest
+                            Whether to use the last modified time while
+                            comparing files with different content.
       -dry, --dry-run       Just simulate and report the file operations that will
                             be performed with the current configuration.
       -no-bar, --hide-progress-bar
@@ -49,7 +52,6 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
  - `pip install directsync`
 
 **ToDo:**
- - Add `preserve-latest` option: Among the 2 files, the one with the latest modification date should be preserved.
  - Give more fine-tuned control of file comparison algorithm to the user.
  - Add `ignore-pattern` option to let the user ignore certain files based on the regex pattern provided.
  - Add test cases.
@@ -63,3 +65,4 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
  - ~~Add `simulate` option.~~
  - ~~Add `use-trash` option to send to recycle bin instead of delete/overwrite.~~
  - ~~Add `cache` option to cache the results of the previous difference check to disk.~~
+ - ~~Add `preserve-latest` option: Among the 2 files, the one with the latest modification date should be preserved.~~

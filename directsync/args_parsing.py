@@ -71,6 +71,12 @@ def prepare_args_parser():
         help='Whether to use previously cached comparison-check result from\
             disk.')
     parser.add_argument(
+        '-latest',
+        '--preserve-latest',
+        action='store_true',
+        help='Whether to use the last modified time while comparing files\
+              with different content.')
+    parser.add_argument(
         '-dry',
         '--dry-run',
         action='store_true',

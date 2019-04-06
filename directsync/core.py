@@ -217,7 +217,12 @@ class DirectSync:
         if self.progress_bar:
             self.progress_bar.close()
 
-    def _sync_items(self, item1, item2, overwrite=False, use_trash=False):
+    def _sync_items(self,
+                    item1,
+                    item2,
+                    overwrite=False,
+                    use_trash=False,
+                    preserve_latest=False):
         '''
         Synchronize two files/directories.
         `overwrite`: Whether to overwrite item1 on item2 if present.
@@ -235,9 +240,16 @@ class DirectSync:
                             else send2trash(str(item2.resolve()))
                     shutil.copytree(item1, item2)
                 else:
+                    should_reverse = self._compare_file_mtime(item1,
+                                                              item2,
+                                                              preserve_latest)
+                    if should_reverse:
+                        item1, item2 = item2, item1
                     if item2.exists() and use_trash:
                         send2trash(str(item2.resolve()))
                     shutil.copyfile(item1, item2)
+                    if should_reverse:
+                        item1, item2 = item2, item1
 
     def _remove_item(self, item, use_trash=False):
         '''
@@ -255,13 +267,18 @@ class DirectSync:
                 else:
                     item.unlink()
 
+    def _compare_file_mtime(self, item1, item2, preserve_latest):
+        return preserve_latest and (item1.stat().st_mtime <
+                                    item2.stat().st_mtime)
+
     def sync_dirs(self,
                   overwrite=False,
                   add_missing=False,
                   remove_extra=False,
                   reverse_direction=False,
                   dry_run=False,
-                  use_trash=False):
+                  use_trash=False,
+                  preserve_latest=False):
         '''
         Synchronize the directories based on the arguments passed:
         `overwrite`: Whether to overwrite files in destination whose content
@@ -329,7 +346,8 @@ class DirectSync:
                     dry_run_report += ' - "{}" -> "{}"\n'.format(
                         item_src, item_dst)
                 else:
-                    self._sync_items(item_src, item_dst, overwrite, use_trash)
+                    self._sync_items(item_src, item_dst, overwrite, use_trash,
+                                     preserve_latest)
                 self._mark_file_visit()
             dry_run_report += dry_run_footer
         if overwrite and len(self.dirs_data.content_diff):
@@ -343,10 +361,18 @@ class DirectSync:
                 if reverse_direction:
                     item_src, item_dst = item_dst, item_src
                 if dry_run:
+                    should_reverse = self._compare_file_mtime(item_src,
+                                                              item_dst,
+                                                              preserve_latest)
+                    if should_reverse:
+                        item_src, item_dst = item_dst, item_src
                     dry_run_report += ' - "{}" -> "{}"\n'.format(
                         item_src, item_dst)
+                    if should_reverse:
+                        item_src, item_dst = item_dst, item_src
                 else:
-                    self._sync_items(item_src, item_dst, True, use_trash)
+                    self._sync_items(item_src, item_dst, True, use_trash,
+                                     preserve_latest)
                 self._mark_file_visit()
             dry_run_report += dry_run_footer
         if self.progress_bar:
