@@ -215,6 +215,10 @@ class DirectSync:
                 unit=' items')
         self._compare_dir_contents(left_dir_path, right_dir_path)
         if self.progress_bar:
+            # In cases where the directories are very different, not all files
+            # and sub-dirs are visited. So, we'll need to manually update the
+            # progress bar to the finish.
+            self.progress_bar.update(total_files_count-self.progress_bar.n)
             self.progress_bar.close()
 
     def _sync_items(self,
