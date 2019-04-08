@@ -61,6 +61,7 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
  - Handle nested structures with symlinks.
  - Provide direct interface with online storage services.
  - Add developer guidelines.
+ - Explore parallel processing.
  - ~~Add demo.~~
  - ~~Add `simulate` option.~~
  - ~~Add `use-trash` option to send to recycle bin instead of delete/overwrite.~~
