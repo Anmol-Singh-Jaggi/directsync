@@ -6,7 +6,7 @@
 
 [![Say thanks](https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg)](https://saythanks.io/to/Anmol-Singh-Jaggi)
 
-A **fast** and simple utility to compare/synchronize/mirror folder contents, completely free and open-source!
+A simple and ***fast*** utility to compare/synchronize/mirror folder contents, completely free and open-source<sup>*TM*</sup>!
 
 **Demo**
 
