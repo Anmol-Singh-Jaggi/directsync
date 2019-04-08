@@ -6,7 +6,7 @@
 
 [![Say thanks](https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg)](https://saythanks.io/to/Anmol-Singh-Jaggi)
 
-An efficient and easy-to-use utility to compare/synchronize/mirror folder contents.
+A **fast** and simple utility to compare/synchronize/mirror folder contents, completely free and open-source!
 
 **Demo**
 
@@ -64,6 +64,7 @@ An efficient and easy-to-use utility to compare/synchronize/mirror folder conten
  - Provide direct interface with online storage services.
  - Add developer guidelines.
  - Explore parallel processing.
+ - Add benchmarks.
  - ~~Add demo.~~
  - ~~Add `simulate` option.~~
  - ~~Add `use-trash` option to send to recycle bin instead of delete/overwrite.~~
