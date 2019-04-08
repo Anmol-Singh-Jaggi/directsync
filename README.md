@@ -2,7 +2,9 @@
 
 [![PyPI version](https://badge.fury.io/py/directsync.svg)](https://badge.fury.io/py/directsync)
 ![MIT License](https://img.shields.io/badge/license-MIT-green.svg)
-[![image](https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg)](https://saythanks.io/to/Anmol-Singh-Jaggi)
+![Blazing fast](https://img.shields.io/badge/speed-blazing%20%F0%9F%94%A5-brightgreen.svg)
+
+[![Say thanks](https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg)](https://saythanks.io/to/Anmol-Singh-Jaggi)
 
 An efficient and easy-to-use utility to compare/synchronize/mirror folder contents.
 
