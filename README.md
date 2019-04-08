@@ -51,6 +51,7 @@ A simple and ***fast*** utility to compare/synchronize/mirror folder contents, c
                             very differently.
 
 **Installation:**
+ - Install Python 3 (>=3.5)
  - `pip install directsync`
 
 **ToDo:**
