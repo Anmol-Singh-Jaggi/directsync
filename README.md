@@ -14,13 +14,13 @@ A simple and ***fast*** utility to compare/synchronize/mirror folder contents, c
 
 **Usage:**
 
-    directsync [-h] [-add] [-rm] [-ovr] [-rev] [-mirr] [-trash] [-cache]
+    directsync [-h] [-add] [-rm] [-ovr] [-mirr] [-trash] [-cache]
                [-latest] [-dry] [-no-bar]
-               left-path right-path
+               src-path dst-path
 
     positional arguments:
-    left-path             The path of the left(source) directory.
-    right-path            The path of the right(destination) directory.
+    src-path             The path of the source directory.
+    dst-path            The path of the destination directory.
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -31,9 +31,6 @@ A simple and ***fast*** utility to compare/synchronize/mirror folder contents, c
       -ovr, --overwrite-content
                             Overwrite the files having same name but different
                             content.
-      -rev, --reverse-sync-direction
-                            Use the right folder as source and the left as
-                            destination.
       -mirr, --mirror-contents
                             Make the destination directory exactly same as the
                             source. Shorthand for `-add -rm -ovr`.

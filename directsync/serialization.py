@@ -24,11 +24,11 @@ def get_serialization_filepath(dirsync):
     identify manually, otherwise just the hash would have been
     enough.
     '''
-    left_path = dirsync.dirs_data.data_left.path.resolve()
-    right_path = dirsync.dirs_data.data_right.path.resolve()
-    filename = str(left_path) + '&&' + str(right_path)
+    src_path = dirsync.dirs_data.data_src.path.resolve()
+    dst_path = dirsync.dirs_data.data_dst.path.resolve()
+    filename = str(src_path) + '&&' + str(dst_path)
     filename = hashlib.sha1(filename.encode()).hexdigest() + '.pickle'
-    filename = left_path.stem + '_' + right_path.stem + '_' + filename
+    filename = src_path.stem + '_' + dst_path.stem + '_' + filename
     tmp_dir = Path(tempfile.gettempdir())
     tmp_dir = tmp_dir / 'directsync'
     tmp_dir.mkdir(exist_ok=True)

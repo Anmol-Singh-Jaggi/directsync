@@ -30,9 +30,9 @@ def prepare_args_parser():
         epilog=epilog,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
-        'left-path', help='The path of the left(source) directory.')
+        'src-path', help='The path of the source directory.')
     parser.add_argument(
-        'right-path', help='The path of the right(destination) directory.')
+        'dst-path', help='The path of the destination directory.')
     parser.add_argument(
         '-add',
         '--add-missing',
@@ -48,11 +48,6 @@ def prepare_args_parser():
         '--overwrite-content',
         action='store_true',
         help='Overwrite the files having same name but different content.')
-    parser.add_argument(
-        '-rev',
-        '--reverse-sync-direction',
-        action='store_true',
-        help='Use the right folder as source and the left as destination.')
     parser.add_argument(
         '-mirr',
         '--mirror-contents',

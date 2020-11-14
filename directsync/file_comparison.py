@@ -51,3 +51,9 @@ def compare_file_contents_buffered(path1, path2, buffer_size=100000):
                 return False
             if not path1_bytes:
                 return True
+
+
+def is_src_file_bigger(path_src, path_dst):
+    src_size = path_src.stat().st_size
+    dst_size = path_dst.stat().st_size
+    return src_size > dst_size
